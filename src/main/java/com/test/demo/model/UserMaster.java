@@ -37,7 +37,7 @@ public class UserMaster {
     @Column(nullable = false)
     private String status;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_club_access", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "club_id")
     private List<Integer> clubIds;

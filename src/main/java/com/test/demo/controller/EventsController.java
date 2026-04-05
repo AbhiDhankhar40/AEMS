@@ -19,8 +19,8 @@ public class EventsController {
 
     private final EventsService eventsService;
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Events> createEvent(
+    @PostMapping(value = "/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Events> saveEvent(
             @RequestPart("event") Events event,
             @RequestPart(value = "poster", required = false) MultipartFile poster,
             @RequestPart(value = "geoTag", required = false) MultipartFile geoTag,
@@ -37,7 +37,7 @@ public class EventsController {
         return ResponseEntity.ok(eventsService.createEvents(events));
     }
 
-    @GetMapping
+    @GetMapping("/getAll")
     public ResponseEntity<List<EventResponseDTO>> getAllEvents() {
         return ResponseEntity.ok(eventsService.getAllEvents());
     }

@@ -1,8 +1,13 @@
 package com.test.demo.serviceImpl;
 
 import com.test.demo.dto.EventResponseDTO;
+import com.test.demo.model.Club;
+import com.test.demo.model.Department;
 import com.test.demo.model.EventPhotos;
 import com.test.demo.model.Events;
+import com.test.demo.repository.ClubRepository;
+import com.test.demo.repository.DepartmentRepository;
+import com.test.demo.repository.EventPhotosRepository;
 import com.test.demo.repository.EventsRepository;
 import com.test.demo.service.ClubService;
 import com.test.demo.service.DepartmentService;
@@ -16,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +30,9 @@ import java.util.stream.Collectors;
 public class EventsServiceImpl implements EventsService {
 
     private final EventsRepository eventsRepository;
+    private final DepartmentRepository departmentRepository;
+    private final ClubRepository clubRepository;
+    private final EventPhotosRepository eventPhotosRepository;
     private final EventPhotosService eventPhotosService;
     private final DepartmentService departmentService;
     private final ClubService clubService;
@@ -89,27 +98,17 @@ public class EventsServiceImpl implements EventsService {
     @Transactional(readOnly = true)
     public List<EventResponseDTO> getAllEvents() {
         return eventsRepository.findAll().stream().map(event -> {
-            String deptName = "";
-            if (event.getDepartment() != null) {
-                try {
-                    deptName = departmentService.getDepartmentById(event.getDepartment().longValue()).getDepartmentName();
-                } catch (Exception e) {}
-            }
+            String deptName = Optional.ofNullable(event.getDepartment())
+                    .flatMap(id -> departmentRepository.findById(id.longValue()))
+                    .map(Department::getDepartmentName)
+                    .orElse("");
 
-            String clubName = "";
-            if (event.getClubId() != null) {
-                try {
-                    clubName = clubService.getClubById(event.getClubId().longValue()).getName();
-                } catch (Exception e) {}
-            }
+            String clubName = Optional.ofNullable(event.getClubId())
+                    .flatMap(id -> clubRepository.findById(id.longValue()))
+                    .map(Club::getName)
+                    .orElse("");
 
-            String banner = null;
-            String poster = null;
-            try {
-                EventPhotos photos = eventPhotosService.getEventPhotosByEventId(event.getId());
-                banner = photos.getBanner();
-                poster = photos.getPoster();
-            } catch (Exception e) {}
+            Optional<EventPhotos> photos = eventPhotosRepository.findByEventId(event.getId());
 
             return EventResponseDTO.builder()
                     .eventName(event.getTitle())
@@ -121,8 +120,8 @@ public class EventsServiceImpl implements EventsService {
                     .venue(event.getVenue())
                     .highlights(event.getHighLights())
                     .purpose(event.getPurpose())
-                    .banner(banner)
-                    .poster(poster)
+                    .banner(photos.map(EventPhotos::getBanner).orElse(null))
+                    .poster(photos.map(EventPhotos::getPoster).orElse(null))
                     .build();
         }).collect(Collectors.toList());
     }

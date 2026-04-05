@@ -1,5 +1,6 @@
 package com.test.demo.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -36,7 +37,14 @@ public class UserLoginController {
                     .body(Map.of("message", "Invalid username or password"));
         }
 
-        return ResponseEntity.ok(new LoginResponse(user.getName(), user.getUsername(), "Active"));
+        return ResponseEntity.ok(new LoginResponse(
+                user.getName(),
+                user.getUsername(),
+                user.getStatus(),
+                user.getDepartment(),
+                user.getClubIds(),
+                user.getUserType()
+        ));
     }
 
     @GetMapping("/health")
@@ -46,5 +54,5 @@ public class UserLoginController {
 
     public record LoginRequest(String username, String password) {}
 
-    public record LoginResponse(String name, String username, String status) {}
+    public record LoginResponse(String name, String username, String status, Integer department, List<Integer> clubIds, String userType) {}
 }
