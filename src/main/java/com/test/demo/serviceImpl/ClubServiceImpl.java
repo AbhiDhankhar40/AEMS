@@ -1,13 +1,17 @@
 package com.test.demo.serviceImpl;
 
+import com.test.demo.dto.ClubShortResponseDTO;
 import com.test.demo.model.Club;
+import com.test.demo.model.UserMaster;
 import com.test.demo.repository.ClubRepository;
+import com.test.demo.repository.UserMasterRepository;
 import com.test.demo.service.ClubService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +19,7 @@ import java.util.List;
 public class ClubServiceImpl implements ClubService {
 
     private final ClubRepository clubRepository;
+    private final UserMasterRepository userMasterRepository;
 
     @Override
     public Club createClub(Club club) {
@@ -75,6 +80,32 @@ public class ClubServiceImpl implements ClubService {
     @Transactional(readOnly = true)
     public List<Club> getActiveClubsByDepartment(Integer departmentId) {
         return clubRepository.findByDepartmentAndStatus(departmentId, "Active");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClubShortResponseDTO> getClubsByUserId(Long userId) {
+        UserMaster user = userMasterRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<Club> clubs;
+        String userType = user.getUserType();
+
+        if ("Super Admin".equalsIgnoreCase(userType)) {
+            clubs = clubRepository.findByStatus("Active");
+        } else if ("Admin".equalsIgnoreCase(userType)) {
+            clubs = clubRepository.findByDepartmentAndStatus(user.getDepartment(), "Active");
+        } else {
+            List<Long> clubIds = user.getClubIds().stream().map(Integer::longValue).collect(Collectors.toList());
+            clubs = clubRepository.findByIdInAndStatus(clubIds, "Active");
+        }
+
+        return clubs.stream()
+                .map(club -> ClubShortResponseDTO.builder()
+                        .clubId(club.getId())
+                        .clubName(club.getName())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Override

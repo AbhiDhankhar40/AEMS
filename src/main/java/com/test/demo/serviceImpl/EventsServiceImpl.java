@@ -1,5 +1,7 @@
 package com.test.demo.serviceImpl;
 
+import com.test.demo.dto.EventShortResponseDTO;
+import com.test.demo.dto.EventCountDTO;
 import com.test.demo.dto.EventResponseDTO;
 import com.test.demo.model.Club;
 import com.test.demo.model.Department;
@@ -9,6 +11,8 @@ import com.test.demo.repository.ClubRepository;
 import com.test.demo.repository.DepartmentRepository;
 import com.test.demo.repository.EventPhotosRepository;
 import com.test.demo.repository.EventsRepository;
+import com.test.demo.repository.UserMasterRepository;
+import com.test.demo.model.UserMaster;
 import com.test.demo.service.ClubService;
 import com.test.demo.service.DepartmentService;
 import com.test.demo.service.EventPhotosService;
@@ -21,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -33,6 +38,7 @@ public class EventsServiceImpl implements EventsService {
     private final DepartmentRepository departmentRepository;
     private final ClubRepository clubRepository;
     private final EventPhotosRepository eventPhotosRepository;
+    private final UserMasterRepository userMasterRepository;
     private final EventPhotosService eventPhotosService;
     private final DepartmentService departmentService;
     private final ClubService clubService;
@@ -97,33 +103,85 @@ public class EventsServiceImpl implements EventsService {
     @Override
     @Transactional(readOnly = true)
     public List<EventResponseDTO> getAllEvents() {
-        return eventsRepository.findAll().stream().map(event -> {
-            String deptName = Optional.ofNullable(event.getDepartment())
-                    .flatMap(id -> departmentRepository.findById(id.longValue()))
-                    .map(Department::getDepartmentName)
-                    .orElse("");
+        return eventsRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
 
-            String clubName = Optional.ofNullable(event.getClubId())
-                    .flatMap(id -> clubRepository.findById(id.longValue()))
-                    .map(Club::getName)
-                    .orElse("");
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventResponseDTO> getEventsByUserId(Long userId) {
+        UserMaster user = userMasterRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-            Optional<EventPhotos> photos = eventPhotosRepository.findByEventId(event.getId());
+        List<Events> events;
+        String userType = user.getUserType();
 
-            return EventResponseDTO.builder()
-                    .eventName(event.getTitle())
-                    .organizer(event.getOrganiser())
-                    .departmentName(deptName)
-                    .clubName(clubName)
-                    .date(event.getDate())
-                    .time(event.getTime())
-                    .venue(event.getVenue())
-                    .highlights(event.getHighLights())
-                    .purpose(event.getPurpose())
-                    .banner(photos.map(EventPhotos::getBanner).orElse(null))
-                    .poster(photos.map(EventPhotos::getPoster).orElse(null))
-                    .build();
-        }).collect(Collectors.toList());
+        if ("Super Admin".equalsIgnoreCase(userType)) {
+            events = eventsRepository.findTop10ByOrderByIdDesc();
+        } else if ("Admin".equalsIgnoreCase(userType)) {
+            events = eventsRepository.findByDepartmentOrderByIdDesc(user.getDepartment());
+        } else {
+            events = eventsRepository.findTop10ByClubIdInOrderByIdDesc(user.getClubIds());
+        }
+
+        return events.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EventCountDTO getEventCountsByUserId(Long userId) {
+        UserMaster user = userMasterRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String userType = user.getUserType();
+        long total, upcoming, completed;
+
+        if ("Super Admin".equalsIgnoreCase(userType)) {
+            total = eventsRepository.count();
+            upcoming = eventsRepository.countByStatus("Upcoming");
+            completed = eventsRepository.countByStatus("Completed");
+        } else if ("Admin".equalsIgnoreCase(userType)) {
+            total = eventsRepository.countByDepartment(user.getDepartment());
+            upcoming = eventsRepository.countByDepartmentAndStatus(user.getDepartment(), "Upcoming");
+            completed = eventsRepository.countByDepartmentAndStatus(user.getDepartment(), "Completed");
+        } else {
+            total = eventsRepository.countByClubIdIn(user.getClubIds());
+            upcoming = eventsRepository.countByClubIdInAndStatus(user.getClubIds(), "Upcoming");
+            completed = eventsRepository.countByClubIdInAndStatus(user.getClubIds(), "Completed");
+        }
+
+        return EventCountDTO.builder().total(total).upcoming(upcoming).completed(completed).build();
+    }
+
+    private EventResponseDTO convertToDTO(Events event) {
+        String deptName = Optional.ofNullable(event.getDepartment())
+                .flatMap(id -> departmentRepository.findById(id.longValue()))
+                .map(Department::getDepartmentName)
+                .orElse("");
+
+        String clubName = Optional.ofNullable(event.getClubId())
+                .flatMap(id -> clubRepository.findById(id.longValue()))
+                .map(Club::getName)
+                .orElse("");
+
+        Optional<EventPhotos> photos = eventPhotosRepository.findByEventId(event.getId());
+
+        return EventResponseDTO.builder()
+                .eventName(event.getTitle())
+                .organizer(event.getOrganiser())
+                .departmentName(deptName)
+                .clubName(clubName)
+                .date(event.getDate())
+                .time(event.getTime())
+                .venue(event.getVenue())
+                .highlights(event.getHighLights())
+                .purpose(event.getPurpose())
+                .banner(photos.map(EventPhotos::getBanner).orElse(null))
+                .poster(photos.map(EventPhotos::getPoster).orElse(null))
+                .build();
     }
 
     @Override
@@ -135,5 +193,22 @@ public class EventsServiceImpl implements EventsService {
     @Transactional(readOnly = true)
     public List<Events> getEventsByIds(List<Long> ids) {
         return eventsRepository.findAllByIdIn(ids);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventShortResponseDTO> getEventsByClubIds(List<Integer> clubIds) {
+        List<Events> events = eventsRepository.findByClubIdIn(clubIds);
+        
+        List<Long> longClubIds = clubIds.stream().map(Integer::longValue).collect(Collectors.toList());
+        Map<Integer, String> clubNamesMap = clubRepository.findAllById(longClubIds).stream()
+                .collect(Collectors.toMap(c -> c.getId().intValue(), Club::getName));
+
+        return events.stream().map(e -> EventShortResponseDTO.builder()
+                .eventId(e.getId())
+                .eventName(e.getTitle())
+                .clubId(e.getClubId())
+                .clubName(clubNamesMap.getOrDefault(e.getClubId(), "Unknown Club"))
+                .build()).collect(Collectors.toList());
     }
 }

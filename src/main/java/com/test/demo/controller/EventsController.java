@@ -1,5 +1,7 @@
 package com.test.demo.controller;
 
+import com.test.demo.dto.EventShortResponseDTO;
+import com.test.demo.dto.EventCountDTO;
 import com.test.demo.dto.EventResponseDTO;
 import com.test.demo.model.Events;
 import com.test.demo.service.EventsService;
@@ -42,6 +44,21 @@ public class EventsController {
         return ResponseEntity.ok(eventsService.getAllEvents());
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<EventResponseDTO>> getEventsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(eventsService.getEventsByUserId(userId));
+    }
+
+    @GetMapping("/counts/{userId}")
+    public ResponseEntity<EventCountDTO> getEventCountsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(eventsService.getEventCountsByUserId(userId));
+    }
+
+    @PostMapping("/by-clubs")
+    public ResponseEntity<List<EventShortResponseDTO>> getEventsByClubIds(@RequestBody List<Integer> clubIds) {
+        return ResponseEntity.ok(eventsService.getEventsByClubIds(clubIds));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Events> getEventById(@PathVariable Long id) {
         return ResponseEntity.ok(eventsService.getEventById(id));
@@ -57,4 +74,6 @@ public class EventsController {
         eventsService.deleteEvent(id);
         return ResponseEntity.noContent().build();
     }
+
+    
 }

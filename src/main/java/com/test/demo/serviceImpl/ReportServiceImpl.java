@@ -9,7 +9,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -18,7 +17,7 @@ import java.util.List;
 public class ReportServiceImpl implements ReportService {
 
     @Override
-    public ByteArrayInputStream generateEventsExcel(List<Events> events) {
+    public byte[] generateEventsExcel(List<Events> events) {
         String[] HEADERS = {
             "ID", "Title", "Organiser", "Department", "Date", "Time", "Venue",
             "Objective", "Speakers", "Participants", "Programme Schedule",
@@ -69,7 +68,7 @@ public class ReportServiceImpl implements ReportService {
             }
 
             workbook.write(out);
-            return new ByteArrayInputStream(out.toByteArray());
+            return out.toByteArray();
         } catch (IOException e) {
             // Consider more specific exception handling or logging
             throw new RuntimeException("Failed to generate Excel file: " + e.getMessage(), e);

@@ -1,5 +1,7 @@
 package com.test.demo.service;
 
+import com.test.demo.dto.EventShortResponseDTO;
+import com.test.demo.dto.EventCountDTO;
 import com.test.demo.dto.EventResponseDTO;
 import com.test.demo.model.Events;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,4 +23,10 @@ public interface EventsService {
     void deleteEvent(Long id);
 
     List<Events> getEventsByIds(List<Long> ids);
+
+    List<EventResponseDTO> getEventsByUserId(Long userId);
+
+    EventCountDTO getEventCountsByUserId(Long userId);
+
+    List<EventShortResponseDTO> getEventsByClubIds(List<Integer> clubIds);
 }

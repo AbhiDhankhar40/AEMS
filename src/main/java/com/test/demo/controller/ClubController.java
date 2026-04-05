@@ -1,5 +1,6 @@
 package com.test.demo.controller;
 
+import com.test.demo.dto.ClubShortResponseDTO;
 import com.test.demo.model.Club;
 import com.test.demo.service.ClubService;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,11 @@ public class ClubController {
         return ResponseEntity.ok(clubService.getActiveClubsByDepartment(departmentId));
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ClubShortResponseDTO>> getClubsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(clubService.getClubsByUserId(userId));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Club> updateClub(@PathVariable Long id, @RequestBody Club club) {
         return ResponseEntity.ok(clubService.updateClub(id, club));
@@ -50,4 +56,7 @@ public class ClubController {
         clubService.deleteClub(id);
         return ResponseEntity.noContent().build();
     }
+
+
+    
 }
