@@ -38,6 +38,7 @@ public class UserLoginController {
         }
 
         return ResponseEntity.ok(new LoginResponse(
+                user.getId(),
                 user.getName(),
                 user.getUsername(),
                 user.getStatus(),
@@ -54,5 +55,5 @@ public class UserLoginController {
 
     public record LoginRequest(String username, String password) {}
 
-    public record LoginResponse(String name, String username, String status, Integer department, List<Integer> clubIds, String userType) {}
+    public record LoginResponse(Long userId, String name, String username, String status, Integer department, List<Integer> clubIds, String userType) {}
 }
