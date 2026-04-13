@@ -1,8 +1,10 @@
 package com.test.demo.service;
 
+import java.util.List;
+
+import com.test.demo.dto.ClubResponseDTO;
 import com.test.demo.dto.ClubShortResponseDTO;
 import com.test.demo.model.Club;
-import java.util.List;
 
 public interface ClubService {
     
@@ -14,9 +16,9 @@ public interface ClubService {
     
     Club getClubById(Long id);
     
-    List<Club> getAllClubs();
+    List<ClubResponseDTO> getAllClubs();
     
-    List<Club> getActiveClubsByDepartment(Integer departmentId);
+    List<ClubResponseDTO> getActiveClubsByDepartment(Integer departmentId);
 
     List<ClubShortResponseDTO> getClubsByUserId(Long userId);
     

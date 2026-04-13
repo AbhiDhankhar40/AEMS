@@ -24,8 +24,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -68,12 +70,13 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Override
-    public Events updateEvent(Long id, Events event) {
+    public Events updateEvent(Long id, Events event, MultipartFile poster, MultipartFile geoTag, MultipartFile banner, MultipartFile pic1, MultipartFile pic2, MultipartFile pic3) throws IOException {
         Events existing = getEventById(id);
         
         existing.setTitle(event.getTitle());
         existing.setOrganiser(event.getOrganiser());
         existing.setDepartment(event.getDepartment());
+        existing.setClubId(event.getClubId());
         existing.setDate(event.getDate());
         existing.setTime(event.getTime());
         existing.setVenue(event.getVenue());
@@ -90,7 +93,21 @@ public class EventsServiceImpl implements EventsService {
         existing.setAcknowledgement(event.getAcknowledgement());
         existing.setStatus(event.getStatus());
 
-        return eventsRepository.save(existing);
+        Events savedEvent = eventsRepository.save(existing);
+
+        // Handle Image Updates
+        EventPhotos photos = eventPhotosRepository.findByEventId(id).orElse(new EventPhotos());
+        photos.setEventId(savedEvent.getId());
+
+        if (poster != null) photos.setPoster(Base64.getEncoder().encodeToString(poster.getBytes()));
+        if (geoTag != null) photos.setGeoTag(Base64.getEncoder().encodeToString(geoTag.getBytes()));
+        if (banner != null) photos.setBanner(Base64.getEncoder().encodeToString(banner.getBytes()));
+        if (pic1 != null) photos.setPic1(Base64.getEncoder().encodeToString(pic1.getBytes()));
+        if (pic2 != null) photos.setPic2(Base64.getEncoder().encodeToString(pic2.getBytes()));
+        if (pic3 != null) photos.setPic3(Base64.getEncoder().encodeToString(pic3.getBytes()));
+
+        eventPhotosService.saveEventPhotos(photos);
+        return savedEvent;
     }
 
     @Override
@@ -103,9 +120,8 @@ public class EventsServiceImpl implements EventsService {
     @Override
     @Transactional(readOnly = true)
     public List<EventResponseDTO> getAllEvents() {
-        return eventsRepository.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        List<Events> events = eventsRepository.findAll();
+        return convertToDTOList(events);
     }
 
     @Override
@@ -125,9 +141,7 @@ public class EventsServiceImpl implements EventsService {
             events = eventsRepository.findTop10ByClubIdInOrderByIdDesc(user.getClubIds());
         }
 
-        return events.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return convertToDTOList(events);
     }
 
     @Override
@@ -156,32 +170,36 @@ public class EventsServiceImpl implements EventsService {
         return EventCountDTO.builder().total(total).upcoming(upcoming).completed(completed).build();
     }
 
-    private EventResponseDTO convertToDTO(Events event) {
-        String deptName = Optional.ofNullable(event.getDepartment())
-                .flatMap(id -> departmentRepository.findById(id.longValue()))
-                .map(Department::getDepartmentName)
-                .orElse("");
+    private List<EventResponseDTO> convertToDTOList(List<Events> events) {
+        if (events.isEmpty()) return Collections.emptyList();
 
-        String clubName = Optional.ofNullable(event.getClubId())
-                .flatMap(id -> clubRepository.findById(id.longValue()))
-                .map(Club::getName)
-                .orElse("");
+        List<Long> deptIds = events.stream().map(Events::getDepartment).filter(Objects::nonNull).map(Integer::longValue).distinct().collect(Collectors.toList());
+        List<Long> clubIds = events.stream().map(Events::getClubId).filter(Objects::nonNull).map(Integer::longValue).distinct().collect(Collectors.toList());
 
-        Optional<EventPhotos> photos = eventPhotosRepository.findByEventId(event.getId());
+        Map<Integer, String> deptMap = departmentRepository.findAllById(deptIds).stream()
+                .collect(Collectors.toMap(d -> d.getId().intValue(), Department::getDepartmentName, (v1, v2) -> v1));
+        Map<Integer, String> clubMap = clubRepository.findAllById(clubIds).stream()
+                .collect(Collectors.toMap(c -> c.getId().intValue(), Club::getName, (v1, v2) -> v1));
 
-        return EventResponseDTO.builder()
-                .eventName(event.getTitle())
-                .organizer(event.getOrganiser())
-                .departmentName(deptName)
-                .clubName(clubName)
-                .date(event.getDate())
-                .time(event.getTime())
-                .venue(event.getVenue())
-                .highlights(event.getHighLights())
-                .purpose(event.getPurpose())
-                .banner(photos.map(EventPhotos::getBanner).orElse(null))
-                .poster(photos.map(EventPhotos::getPoster).orElse(null))
-                .build();
+        return events.stream().map(event -> {
+            String deptName = event.getDepartment() != null ? deptMap.getOrDefault(event.getDepartment(), "") : "";
+            String clubName = event.getClubId() != null ? clubMap.getOrDefault(event.getClubId(), "") : "";
+            Optional<EventPhotos> photos = eventPhotosRepository.findByEventId(event.getId());
+
+            return EventResponseDTO.builder()
+                    .eventName(event.getTitle())
+                    .organizer(event.getOrganiser())
+                    .departmentName(deptName)
+                    .clubName(clubName)
+                    .date(event.getDate())
+                    .time(event.getTime())
+                    .venue(event.getVenue())
+                    .highlights(event.getHighLights())
+                    .purpose(event.getPurpose())
+                    .banner(photos.map(EventPhotos::getBanner).orElse(null))
+                    .poster(photos.map(EventPhotos::getPoster).orElse(null))
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Override

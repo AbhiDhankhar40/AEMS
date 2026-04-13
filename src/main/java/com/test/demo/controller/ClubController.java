@@ -1,13 +1,23 @@
 package com.test.demo.controller;
 
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.test.demo.dto.ClubResponseDTO;
 import com.test.demo.dto.ClubShortResponseDTO;
 import com.test.demo.model.Club;
 import com.test.demo.service.ClubService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/clubs")
@@ -16,7 +26,7 @@ public class ClubController {
 
     private final ClubService clubService;
 
-    @PostMapping
+    @PostMapping("/add")
     public ResponseEntity<Club> createClub(@RequestBody Club club) {
         return ResponseEntity.ok(clubService.createClub(club));
     }
@@ -26,8 +36,8 @@ public class ClubController {
         return ResponseEntity.ok(clubService.createClubs(clubs));
     }
 
-    @GetMapping
-    public ResponseEntity<List<Club>> getAllClubs() {
+    @GetMapping("/getAll")
+    public ResponseEntity<List<ClubResponseDTO>> getAllClubs() {
         return ResponseEntity.ok(clubService.getAllClubs());
     }
 
@@ -37,7 +47,7 @@ public class ClubController {
     }
 
     @GetMapping("/department/{departmentId}")
-    public ResponseEntity<List<Club>> getActiveClubsByDepartment(@PathVariable Integer departmentId) {
+    public ResponseEntity<List<ClubResponseDTO>> getActiveClubsByDepartment(@PathVariable Integer departmentId) {
         return ResponseEntity.ok(clubService.getActiveClubsByDepartment(departmentId));
     }
 

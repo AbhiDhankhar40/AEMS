@@ -64,9 +64,18 @@ public class EventsController {
         return ResponseEntity.ok(eventsService.getEventById(id));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Events> updateEvent(@PathVariable Long id, @RequestBody Events event) {
-        return ResponseEntity.ok(eventsService.updateEvent(id, event));
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Events> updateEvent(
+            @PathVariable Long id,
+            @RequestPart("event") Events event,
+            @RequestPart(value = "poster", required = false) MultipartFile poster,
+            @RequestPart(value = "geoTag", required = false) MultipartFile geoTag,
+            @RequestPart(value = "banner", required = false) MultipartFile banner,
+            @RequestPart(value = "pic1", required = false) MultipartFile pic1,
+            @RequestPart(value = "pic2", required = false) MultipartFile pic2,
+            @RequestPart(value = "pic3", required = false) MultipartFile pic3) throws IOException {
+        
+        return ResponseEntity.ok(eventsService.updateEvent(id, event, poster, geoTag, banner, pic1, pic2, pic3));
     }
 
     @DeleteMapping("/{id}")

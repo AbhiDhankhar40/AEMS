@@ -14,7 +14,7 @@ public interface EventsService {
     
     List<Events> createEvents(List<Events> events);
     
-    Events updateEvent(Long id, Events event);
+    Events updateEvent(Long id, Events event, MultipartFile poster, MultipartFile geoTag, MultipartFile banner, MultipartFile pic1, MultipartFile pic2, MultipartFile pic3) throws IOException;
     
     Events getEventById(Long id);
     

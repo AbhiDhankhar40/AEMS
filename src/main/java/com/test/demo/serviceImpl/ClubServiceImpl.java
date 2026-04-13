@@ -1,17 +1,24 @@
 package com.test.demo.serviceImpl;
 
-import com.test.demo.dto.ClubShortResponseDTO;
-import com.test.demo.model.Club;
-import com.test.demo.model.UserMaster;
-import com.test.demo.repository.ClubRepository;
-import com.test.demo.repository.UserMasterRepository;
-import com.test.demo.service.ClubService;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.test.demo.dto.ClubResponseDTO;
+import com.test.demo.dto.ClubShortResponseDTO;
+import com.test.demo.model.Club;
+import com.test.demo.model.Department;
+import com.test.demo.model.UserMaster;
+import com.test.demo.repository.ClubRepository;
+import com.test.demo.repository.DepartmentRepository;
+import com.test.demo.repository.UserMasterRepository;
+import com.test.demo.service.ClubService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +27,7 @@ public class ClubServiceImpl implements ClubService {
 
     private final ClubRepository clubRepository;
     private final UserMasterRepository userMasterRepository;
+    private final DepartmentRepository departmentRepository;
 
     @Override
     public Club createClub(Club club) {
@@ -72,14 +80,78 @@ public class ClubServiceImpl implements ClubService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Club> getAllClubs() {
-        return clubRepository.findAll();
+    public List<ClubResponseDTO> getAllClubs() {
+        List<Club> clubs = clubRepository.findAll();
+        return mapToClubResponseDTOs(clubs);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Club> getActiveClubsByDepartment(Integer departmentId) {
-        return clubRepository.findByDepartmentAndStatus(departmentId, "Active");
+    public List<ClubResponseDTO> getActiveClubsByDepartment(Integer departmentId) {
+        List<Club> clubs = clubRepository.findByDepartmentAndStatus(departmentId, "Active");
+        return mapToClubResponseDTOs(clubs);
+    }
+
+    private List<ClubResponseDTO> mapToClubResponseDTOs(List<Club> clubs) {
+        if (clubs.isEmpty()) return List.of();
+
+        // Fetch all relevant department IDs to avoid N+1 queries
+        List<Long> departmentIds = clubs.stream()
+                .map(Club::getDepartment)
+                .filter(Objects::nonNull)
+                .map(Integer::longValue)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // Map department IDs to names in one batch query
+        Map<Integer, String> departmentNamesMap = departmentRepository.findAllById(departmentIds).stream()
+                .collect(Collectors.toMap(
+                        d -> d.getId().intValue(),
+                        Department::getDepartmentName,
+                        (v1, v2) -> v1
+                ));
+
+        return clubs.stream()
+                .map(club -> convertToDTO(club, departmentNamesMap))
+                .collect(Collectors.toList());
+    }
+
+    private ClubResponseDTO convertToDTO(Club club, Map<Integer, String> departmentMap) {
+        String deptName;
+		if (club.getDepartment() != null)
+			deptName = departmentMap.getOrDefault(club.getDepartment(), "");
+		else
+			deptName = "";
+
+        return ClubResponseDTO.builder()
+                .id(club.getId())
+                .name(club.getName())
+                .department(club.getDepartment())
+                .departmentName(deptName)
+                .block(club.getBlock())
+                .advisorName(club.getAdvisorName())
+                .advisorDesignation(club.getAdvisorDesignation())
+                .advisorMobile(club.getAdvisorMobile())
+                .advisorEmail(club.getAdvisorEmail())
+                .coordinatorName(club.getCoordinatorName())
+                .coordinatorDesignation(club.getCoordinatorDesignation())
+                .coordinatorEmail(club.getCoordinatorEmail())
+                .coordinatorMobile(club.getCoordinatorMobile())
+                .coordinator2Name(club.getCoordinator2Name())
+                .coordinator2Designation(club.getCoordinator2Designation())
+                .coordinator2Email(club.getCoordinator2Email())
+                .coordinator2Mobile(club.getCoordinator2Mobile())
+                .president(club.getPresident())
+                .presidentMobile(club.getPresidentMobile())
+                .vicePresident(club.getVicePresident())
+                .secretary(club.getSecretary())
+                .jointSecretary(club.getJointSecretary())
+                .docCurator(club.getDocCurator())
+                .creativeHead(club.getCreativeHead())
+                .treasurer(club.getTreasurer())
+                .memberName(club.getMemberName())
+                .status(club.getStatus())
+                .build();
     }
 
     @Override
