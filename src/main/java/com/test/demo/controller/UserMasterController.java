@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.test.demo.dto.UserResponseDTO;
 import com.test.demo.model.UserMaster;
 import com.test.demo.service.UserMasterService;
 
@@ -16,7 +17,7 @@ public class UserMasterController {
 
     private final UserMasterService service;
 
-    @PostMapping
+    @PostMapping("/add")
     public ResponseEntity<UserMaster> createUser(
             @RequestBody UserMaster user) {
 
@@ -38,8 +39,8 @@ public class UserMasterController {
         return ResponseEntity.ok(service.getUserById(id));
     }
 
-    @GetMapping
-    public ResponseEntity<List<UserMaster>> getAllUsers() {
+    @GetMapping("/getAll")
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
 
         return ResponseEntity.ok(service.getAllUsers());
     }

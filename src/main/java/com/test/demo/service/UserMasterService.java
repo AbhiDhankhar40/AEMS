@@ -1,5 +1,6 @@
 package com.test.demo.service;
 
+import com.test.demo.dto.UserResponseDTO;
 import com.test.demo.model.UserMaster;
 
 import java.util.List;
@@ -12,7 +13,7 @@ public interface UserMasterService {
 
     UserMaster getUserById(Long id);
 
-    List<UserMaster> getAllUsers();
+    List<UserResponseDTO> getAllUsers();
 
     void deleteUser(Long id);
     
